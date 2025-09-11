@@ -5,6 +5,11 @@ services:
     image: marseventh/cloudflare-imgbed:latest
     ports:
       - "7658:8080"
+    environment:
+      - TG_CHAT_ID=-1002300621819
+      - TG_BOT_TOKEN=7542876404:AAEvudRdfXlwIJHcADaXLJBLPBi-aS62bEo
+      - BASIC_USER=star
+      - BASIC_PASS=boyu123456789
     volumes:
       - ./wrangler.toml:/app/wrangler.toml
       - ./data:/app/data
