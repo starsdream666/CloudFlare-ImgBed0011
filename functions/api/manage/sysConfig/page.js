@@ -89,9 +89,10 @@ export async function getPageConfig(db, env) {
         {
             id: 'randomBkApiUrl',
             label: '随机背景图API',
-            placeholder: 'https://t.alcy.cc/ycy',
-            tooltip: '第三方随机图片API地址，留空则不使用随机背景 <br/> 支持直接返回图片或JSON格式 <br/> 示例：https://t.alcy.cc/ycy?json',
+            placeholder: 'https://t.alcy.cc/ycy?json',
+            tooltip: '第三方随机图片API地址，留空则不使用随机背景 <br/> 支持直接返回图片、纯文本URL或JSON格式 <br/> 示例：https://t.alcy.cc/ycy?json',
             category: '全局设置',
+            value: 'https://t.alcy.cc/ycy?json',
         },
         {
             id: 'randomBkApiType',
@@ -99,11 +100,13 @@ export async function getPageConfig(db, env) {
             type: 'select',
             options: [
                 { label: '直接返回图片', value: 'direct' },
+                { label: '纯文本URL', value: 'text' },
                 { label: 'JSON格式', value: 'json' },
             ],
-            placeholder: 'direct',
-            tooltip: '选择API返回类型 <br/> 直接返回图片：API直接返回图片文件 <br/> JSON格式：API返回包含图片URL的JSON',
+            placeholder: 'text',
+            tooltip: '选择API返回类型 <br/> 直接返回图片：API直接返回图片文件 <br/> 纯文本URL：API返回纯文本格式的图片链接 <br/> JSON格式：API返回包含图片URL的JSON',
             category: '全局设置',
+            value: 'text',
         },
         {
             id: 'randomBkJsonPath',
@@ -111,6 +114,15 @@ export async function getPageConfig(db, env) {
             placeholder: 'url',
             tooltip: '当API类型为JSON时，指定图片URL在JSON中的路径 <br/> 例如：url 或 data.imgurl',
             category: '全局设置',
+        },
+        {
+            id: 'randomBkChangeOnNav',
+            label: '页面切换时更新背景',
+            type: 'boolean',
+            default: true,
+            tooltip: '启用后，每次切换页面（如从上传页到管理页）时自动加载新的随机背景',
+            category: '全局设置',
+            value: true,
         },
         {
             id: 'urlPrefix',

@@ -25,10 +25,12 @@
 #### 2.2 随机背景API类型
 - **字段名**: `randomBkApiType`
 - **选项**:
-  - `direct` - 直接返回图片（默认）
+  - `direct` - 直接返回图片
+  - `text` - 纯文本URL（默认，推荐）
   - `json` - JSON 格式
 - **说明**: 
   - **直接返回图片**: API 直接返回图片文件（如 JPG、PNG）
+  - **纯文本URL**: API 返回纯文本格式的图片链接（自动过滤警告信息）
   - **JSON格式**: API 返回包含图片 URL 的 JSON 数据
 
 #### 2.3 JSON图片路径
@@ -53,17 +55,35 @@
 - **范围**: 0-1 之间的小数
 - **说明**: 控制背景图的透明度，1 为完全不透明，0 为完全透明
 
+#### 页面切换时更新背景
+- **字段名**: `randomBkChangeOnNav`
+- **默认值**: `true`（启用）
+- **说明**: 启用后，每次切换页面（如从上传页到管理页）时自动加载新的随机背景
+
 ## 常见 API 示例
 
-### 示例 1: 直接返回图片
+### 示例 1: 纯文本URL（推荐，默认配置）
+```
+API地址: https://t.alcy.cc/ycy?json
+API类型: 纯文本URL
+
+返回格式示例:
+<br />
+<b>Warning</b>: ... (自动过滤)
+https://tc.alcy.cc/q/20250908/db27b1328140eded48723e37b52be46d.webp
+
+说明: 脚本会自动提取图片URL，过滤掉PHP警告等干扰信息
+```
+
+### 示例 2: 直接返回图片
 ```
 API地址: https://t.alcy.cc/ycy
 API类型: 直接返回图片
 ```
 
-### 示例 2: JSON 格式（单个链接）
+### 示例 3: JSON 格式（单个链接）
 ```
-API地址: https://t.alcy.cc/ycy?json
+API地址: https://api.example.com/random?json
 API类型: JSON格式
 JSON图片路径: url
 
@@ -73,25 +93,7 @@ JSON图片路径: url
 }
 ```
 
-### 示例 3: JSON 格式（固定数量）
-```
-API地址: https://t.alcy.cc/ycy?json=6
-API类型: JSON格式
-JSON图片路径: url
-
-说明: 每次请求返回 6 个图片链接中的一个
-```
-
-### 示例 4: JSON 格式（多个随机链接）
-```
-API地址: https://t.alcy.cc/ycy?json&quantity=20
-API类型: JSON格式
-JSON图片路径: url
-
-说明: 每次请求返回 20 个随机链接中的一个
-```
-
-### 示例 5: 嵌套 JSON 格式
+### 示例 4: 嵌套 JSON 格式
 ```
 API地址: https://api.example.com/random
 API类型: JSON格式
@@ -113,18 +115,24 @@ JSON图片路径: data.image.url
 - 根据配置的时间间隔自动切换背景图
 - 支持平滑的淡入淡出过渡效果
 
-### 2. 预加载
+### 2. 页面切换自动更新
+- 每次切换页面（上传页、管理页、用户管理等）时自动加载新背景
+- 支持 Vue Router、浏览器前进后退、Hash 路由等多种路由方式
+- 可通过配置关闭此功能
+
+### 3. 预加载
 - 图片预加载机制，确保切换流畅
 - 加载失败自动跳过，不影响用户体验
 
-### 3. 性能优化
+### 4. 性能优化
 - 自动清理旧的背景层，避免内存占用
 - 使用 CSS3 硬件加速，流畅的动画效果
 
-### 4. 灵活配置
-- 支持多种 API 格式
+### 5. 灵活配置
+- 支持多种 API 格式（直接图片、纯文本URL、JSON）
 - 可自定义透明度和切换间隔
 - 支持嵌套 JSON 路径解析
+- 自动过滤 API 返回的警告信息
 
 ## 技术实现
 
@@ -134,9 +142,10 @@ JSON图片路径: data.image.url
 - CSS 实现全屏背景和淡入淡出动画效果
 
 ### 后端实现
-- 在 `functions/api/manage/sysConfig/page.js` 中添加了三个配置项
+- 在 `functions/api/manage/sysConfig/page.js` 中添加了四个配置项
 - 配置存储在 KV 数据库中
 - 通过 `/api/manage/sysConfig/page` 接口获取配置
+- 默认配置值已预设，保存后立即生效
 
 ## 故障排查
 
@@ -170,7 +179,15 @@ JSON图片路径: data.image.url
 
 ## 更新日志
 
-- **2025-10-26**: 初始版本发布
+- **2025-10-26 v1.1**: 功能增强
+  - ✨ 新增纯文本URL格式支持（推荐）
+  - ✨ 自动过滤 PHP 警告等干扰信息
+  - ✨ 页面切换时自动加载新背景
+  - ✨ 支持 Vue Router、Hash 路由等多种路由方式
+  - 🔧 设置默认 API 为 `https://t.alcy.cc/ycy?json`
+  - 🔧 默认 API 类型改为 `text`（纯文本URL）
+  
+- **2025-10-26 v1.0**: 初始版本发布
   - 支持直接返回图片和 JSON 格式 API
   - 支持自定义切换间隔和透明度
   - 支持嵌套 JSON 路径解析
