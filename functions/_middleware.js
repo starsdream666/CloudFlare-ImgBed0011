@@ -1,0 +1,226 @@
+// 中间件：为所有HTML页面注入随机背景脚本
+export async function onRequest(context) {
+    const { request, next, env } = context;
+    
+    // 获取原始响应
+    const response = await next();
+    
+    // 只处理HTML页面
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) {
+        return response;
+    }
+    
+    // 读取HTML内容
+    let html = await response.text();
+    
+    // 检查是否已经注入过（避免重复注入）
+    if (html.includes('random-background-container')) {
+        return new Response(html, response);
+    }
+    
+    // 注入背景容器和脚本
+    const backgroundScript = `
+<!-- 随机背景容器 -->
+<div id="random-background-container"></div>
+<style>
+/* 随机背景容器样式 */
+#random-background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+    background-color: #f5f5f5;
+}
+
+.random-bg-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+.random-bg-layer.active {
+    opacity: 1;
+}
+
+/* 为主应用添加透明背景支持 */
+#app {
+    position: relative;
+    z-index: 1;
+}
+</style>
+<script>
+// 随机背景图加载脚本
+(function() {
+    async function loadRandomBackground() {
+        try {
+            // 获取页面配置
+            const response = await fetch('/api/manage/sysConfig/page');
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            const config = data.config || [];
+            
+            // 查找配置项
+            const apiUrlConfig = config.find(item => item.id === 'randomBkApiUrl');
+            const apiTypeConfig = config.find(item => item.id === 'randomBkApiType');
+            const jsonPathConfig = config.find(item => item.id === 'randomBkJsonPath');
+            const intervalConfig = config.find(item => item.id === 'bkInterval');
+            const opacityConfig = config.find(item => item.id === 'bkOpacity');
+            
+            const apiUrl = apiUrlConfig?.value;
+            if (!apiUrl) return; // 如果没有配置API，则不加载背景
+            
+            const apiType = apiTypeConfig?.value || 'text';
+            const jsonPath = jsonPathConfig?.value || 'url';
+            const interval = parseInt(intervalConfig?.value) || 3000;
+            const opacity = parseFloat(opacityConfig?.value) || 1;
+            const changeOnNavConfig = config.find(item => item.id === 'randomBkChangeOnNav');
+            const changeOnNav = changeOnNavConfig?.value !== false;
+            
+            const container = document.getElementById('random-background-container');
+            if (!container) return;
+            
+            // 设置容器透明度
+            container.style.opacity = opacity;
+            
+            let currentIndex = 0;
+            
+            async function loadImage() {
+                try {
+                    let imageUrl;
+                    
+                    if (apiType === 'json') {
+                        // JSON格式API
+                        const imgResponse = await fetch(apiUrl);
+                        const imgData = await imgResponse.json();
+                        
+                        // 支持嵌套路径，如 data.imgurl
+                        const pathParts = jsonPath.split('.');
+                        imageUrl = pathParts.reduce((obj, key) => obj?.[key], imgData);
+                    } else if (apiType === 'text') {
+                        // 纯文本URL格式
+                        const imgResponse = await fetch(apiUrl);
+                        const textData = await imgResponse.text();
+                        
+                        // 提取URL（去除可能的警告信息和空白字符）
+                        const urlMatch = textData.match(/https?:\\/\\/[^\\s<>"]+\\.(jpg|jpeg|png|gif|webp|bmp)/i);
+                        imageUrl = urlMatch ? urlMatch[0] : textData.trim().split('\\n').pop().trim();
+                    } else {
+                        // 直接返回图片
+                        imageUrl = apiUrl + (apiUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                    }
+                    
+                    if (!imageUrl) return;
+                    
+                    // 创建新的背景层
+                    const newBg = document.createElement('div');
+                    newBg.className = 'random-bg-layer';
+                    newBg.style.backgroundImage = \`url(\${imageUrl})\`;
+                    newBg.style.zIndex = currentIndex;
+                    
+                    // 预加载图片
+                    const img = new Image();
+                    img.onload = function() {
+                        container.appendChild(newBg);
+                        
+                        // 淡入新背景
+                        setTimeout(() => {
+                            newBg.classList.add('active');
+                        }, 50);
+                        
+                        // 移除旧背景
+                        setTimeout(() => {
+                            const oldLayers = container.querySelectorAll('.random-bg-layer:not(.active)');
+                            oldLayers.forEach(layer => layer.remove());
+                        }, 1000);
+                        
+                        currentIndex++;
+                    };
+                    img.onerror = function() {
+                        console.error('Failed to load background image:', imageUrl);
+                    };
+                    img.src = imageUrl;
+                    
+                } catch (error) {
+                    console.error('Failed to load random background:', error);
+                }
+            }
+            
+            // 立即加载第一张
+            loadImage();
+            
+            // 定时切换背景
+            if (interval > 0) {
+                setInterval(loadImage, interval);
+            }
+            
+            // 监听路由变化（页面切换）
+            if (changeOnNav) {
+                // 监听 Vue Router 的路由变化
+                let lastPath = window.location.pathname + window.location.hash;
+                const checkRouteChange = () => {
+                    const currentPath = window.location.pathname + window.location.hash;
+                    if (currentPath !== lastPath) {
+                        lastPath = currentPath;
+                        loadImage(); // 加载新背景
+                    }
+                };
+                
+                // 使用 MutationObserver 监听 DOM 变化（适用于 SPA）
+                const appElement = document.getElementById('app');
+                if (appElement) {
+                    const observer = new MutationObserver(checkRouteChange);
+                    observer.observe(appElement, {
+                        childList: true,
+                        subtree: true
+                    });
+                }
+                
+                // 同时监听 popstate 事件（浏览器前进后退）
+                window.addEventListener('popstate', loadImage);
+                
+                // 监听 hashchange 事件（hash 路由）
+                window.addEventListener('hashchange', loadImage);
+            }
+            
+        } catch (error) {
+            console.error('Failed to initialize random background:', error);
+        }
+    }
+    
+    // 页面加载完成后执行
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadRandomBackground);
+    } else {
+        loadRandomBackground();
+    }
+})();
+</script>
+`;
+    
+    // 在 </body> 标签前注入
+    if (html.includes('</body>')) {
+        html = html.replace('</body>', backgroundScript + '</body>');
+    } else if (html.includes('<body')) {
+        // 如果没有 </body>，在 <body> 后注入
+        html = html.replace(/<body[^>]*>/, '$&' + backgroundScript);
+    }
+    
+    // 返回修改后的HTML
+    return new Response(html, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers
+    });
+}

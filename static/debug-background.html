@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机背景功能诊断工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .test-section h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status.pending {
+            background: #ffc107;
+        }
+        
+        .status.success {
+            background: #28a745;
+        }
+        
+        .status.error {
+            background: #dc3545;
+        }
+        
+        .result {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .result.success {
+            border-left: 3px solid #28a745;
+            color: #155724;
+            background: #d4edda;
+        }
+        
+        .result.error {
+            border-left: 3px solid #dc3545;
+            color: #721c24;
+            background: #f8d7da;
+        }
+        
+        .result.info {
+            border-left: 3px solid #17a2b8;
+            color: #0c5460;
+            background: #d1ecf1;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .summary h3 {
+            margin-bottom: 10px;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 随机背景功能诊断工具</h1>
+        <p class="subtitle">此工具将帮助你诊断随机背景功能的配置和运行状态</p>
+        
+        <div class="button-group">
+            <button onclick="runAllTests()">🚀 运行所有测试</button>
+            <button onclick="testManualLoad()">🖼️ 手动加载背景</button>
+            <button onclick="location.reload()">🔄 刷新页面</button>
+        </div>
+        
+        <div id="summary" style="display: none;" class="summary">
+            <h3>📊 测试摘要</h3>
+            <div class="summary-item">
+                <span>中间件状态：</span>
+                <span id="summary-middleware">-</span>
+            </div>
+            <div class="summary-item">
+                <span>配置状态：</span>
+                <span id="summary-config">-</span>
+            </div>
+            <div class="summary-item">
+                <span>API 状态：</span>
+                <span id="summary-api">-</span>
+            </div>
+            <div class="summary-item">
+                <span>整体状态：</span>
+                <span id="summary-overall">-</span>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2><span class="status pending" id="status-1"></span>测试 1: 检查中间件是否注入</h2>
+            <p>检查页面中是否存在随机背景容器...</p>
+            <div id="result-1" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2><span class="status pending" id="status-2"></span>测试 2: 检查配置是否正确</h2>
+            <p>从服务器获取随机背景配置...</p>
+            <div id="result-2" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2><span class="status pending" id="status-3"></span>测试 3: 测试 API 连接</h2>
+            <p>测试第三方随机图片 API 是否可访问...</p>
+            <div id="result-3" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2><span class="status pending" id="status-4"></span>测试 4: 提取图片 URL</h2>
+            <p>从 API 响应中提取图片 URL...</p>
+            <div id="result-4" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2><span class="status pending" id="status-5"></span>测试 5: 加载图片</h2>
+            <p>测试图片是否可以正常加载...</p>
+            <div id="result-5" class="result" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        let testResults = {
+            middleware: false,
+            config: false,
+            api: false,
+            overall: false
+        };
+        
+        async function runAllTests() {
+            await test1();
+            await test2();
+            await test3();
+            await test4();
+            await test5();
+            showSummary();
+        }
+        
+        function showResult(testNum, message, type = 'info') {
+            const resultDiv = document.getElementById(`result-${testNum}`);
+            const statusDiv = document.getElementById(`status-${testNum}`);
+            
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+            
+            statusDiv.className = `status ${type === 'error' ? 'error' : 'success'}`;
+        }
+        
+        async function test1() {
+            try {
+                const container = document.getElementById('random-background-container');
+                if (container) {
+                    showResult(1, '✅ 成功！找到随机背景容器。\n中间件已正确注入。', 'success');
+                    testResults.middleware = true;
+                } else {
+                    showResult(1, '❌ 失败！未找到随机背景容器。\n\n可能原因：\n1. Cloudflare Pages 未部署最新代码\n2. functions/_middleware.js 文件未生效\n3. 浏览器缓存了旧版本\n\n解决方法：\n1. 检查 Cloudflare Pages 部署日志\n2. 强制刷新页面 (Ctrl+Shift+R)\n3. 清除浏览器缓存', 'error');
+                    testResults.middleware = false;
+                }
+            } catch (error) {
+                showResult(1, `❌ 错误：${error.message}`, 'error');
+                testResults.middleware = false;
+            }
+        }
+        
+        async function test2() {
+            try {
+                const response = await fetch('/api/manage/sysConfig/page');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const config = data.config || [];
+                
+                const apiUrl = config.find(item => item.id === 'randomBkApiUrl');
+                const apiType = config.find(item => item.id === 'randomBkApiType');
+                const changeOnNav = config.find(item => item.id === 'randomBkChangeOnNav');
+                
+                let result = '✅ 配置获取成功！\n\n';
+                result += `随机背景图API: ${apiUrl?.value || '(未设置)'}\n`;
+                result += `API类型: ${apiType?.value || '(未设置)'}\n`;
+                result += `页面切换时更新: ${changeOnNav?.value !== false ? '启用' : '禁用'}\n`;
+                
+                if (!apiUrl?.value) {
+                    result += '\n⚠️ 警告：未设置随机背景图API！\n请在管理端配置。';
+                    testResults.config = false;
+                } else {
+                    testResults.config = true;
+                }
+                
+                showResult(2, result, apiUrl?.value ? 'success' : 'error');
+            } catch (error) {
+                showResult(2, `❌ 配置获取失败：${error.message}\n\n可能原因：\n1. KV 数据库未绑定\n2. 网络连接问题\n3. 权限不足`, 'error');
+                testResults.config = false;
+            }
+        }
+        
+        async function test3() {
+            try {
+                const response = await fetch('/api/manage/sysConfig/page');
+                const data = await response.json();
+                const config = data.config || [];
+                const apiUrl = config.find(item => item.id === 'randomBkApiUrl')?.value;
+                
+                if (!apiUrl) {
+                    showResult(3, '⚠️ 跳过：未配置 API URL', 'error');
+                    testResults.api = false;
+                    return;
+                }
+                
+                const apiResponse = await fetch(apiUrl);
+                if (!apiResponse.ok) {
+                    throw new Error(`HTTP ${apiResponse.status}: ${apiResponse.statusText}`);
+                }
+                
+                const text = await apiResponse.text();
+                showResult(3, `✅ API 连接成功！\n\nAPI URL: ${apiUrl}\n\n响应内容:\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`, 'success');
+                testResults.api = true;
+            } catch (error) {
+                showResult(3, `❌ API 连接失败：${error.message}\n\n可能原因：\n1. API 地址不正确\n2. API 服务器故障\n3. CORS 跨域问题\n4. 网络连接问题`, 'error');
+                testResults.api = false;
+            }
+        }
+        
+        async function test4() {
+            try {
+                const response = await fetch('/api/manage/sysConfig/page');
+                const data = await response.json();
+                const config = data.config || [];
+                const apiUrl = config.find(item => item.id === 'randomBkApiUrl')?.value;
+                const apiType = config.find(item => item.id === 'randomBkApiType')?.value || 'text';
+                
+                if (!apiUrl) {
+                    showResult(4, '⚠️ 跳过：未配置 API URL', 'error');
+                    return;
+                }
+                
+                const apiResponse = await fetch(apiUrl);
+                const text = await apiResponse.text();
+                
+                let imageUrl;
+                if (apiType === 'text') {
+                    const urlMatch = text.match(/https?:\/\/[^\s<>"]+\.(jpg|jpeg|png|gif|webp|bmp)/i);
+                    imageUrl = urlMatch ? urlMatch[0] : text.trim().split('\n').pop().trim();
+                } else if (apiType === 'json') {
+                    const jsonData = JSON.parse(text);
+                    imageUrl = jsonData.url || jsonData.imgurl;
+                } else {
+                    imageUrl = apiUrl;
+                }
+                
+                if (imageUrl && imageUrl.startsWith('http')) {
+                    showResult(4, `✅ 成功提取图片 URL！\n\n提取的 URL:\n${imageUrl}`, 'success');
+                    window.testImageUrl = imageUrl;
+                } else {
+                    showResult(4, `❌ 提取失败！\n\n原始响应:\n${text}\n\n提取结果:\n${imageUrl}`, 'error');
+                }
+            } catch (error) {
+                showResult(4, `❌ 提取失败：${error.message}`, 'error');
+            }
+        }
+        
+        async function test5() {
+            try {
+                if (!window.testImageUrl) {
+                    showResult(5, '⚠️ 跳过：未获取到图片 URL', 'error');
+                    return;
+                }
+                
+                const img = new Image();
+                img.onload = function() {
+                    showResult(5, `✅ 图片加载成功！\n\n图片 URL: ${window.testImageUrl}\n尺寸: ${img.width} x ${img.height}`, 'success');
+                    testResults.overall = testResults.middleware && testResults.config && testResults.api;
+                };
+                img.onerror = function() {
+                    showResult(5, `❌ 图片加载失败！\n\n图片 URL: ${window.testImageUrl}\n\n可能原因：\n1. 图片 URL 无效\n2. 图片服务器故障\n3. CORS 跨域问题`, 'error');
+                    testResults.overall = false;
+                };
+                img.src = window.testImageUrl;
+            } catch (error) {
+                showResult(5, `❌ 测试失败：${error.message}`, 'error');
+                testResults.overall = false;
+            }
+        }
+        
+        async function testManualLoad() {
+            try {
+                const response = await fetch('/api/manage/sysConfig/page');
+                const data = await response.json();
+                const config = data.config || [];
+                const apiUrl = config.find(item => item.id === 'randomBkApiUrl')?.value;
+                
+                if (!apiUrl) {
+                    alert('未配置随机背景图API！');
+                    return;
+                }
+                
+                const apiResponse = await fetch(apiUrl);
+                const text = await apiResponse.text();
+                const urlMatch = text.match(/https?:\/\/[^\s<>"]+\.(jpg|jpeg|png|gif|webp|bmp)/i);
+                const imageUrl = urlMatch ? urlMatch[0] : text.trim().split('\n').pop().trim();
+                
+                const container = document.getElementById('random-background-container');
+                if (!container) {
+                    alert('未找到背景容器！请先部署 functions/_middleware.js');
+                    return;
+                }
+                
+                const bg = document.createElement('div');
+                bg.className = 'random-bg-layer active';
+                bg.style.backgroundImage = `url(${imageUrl})`;
+                container.appendChild(bg);
+                
+                alert('背景已加载！如果看到背景图片，说明功能正常。');
+            } catch (error) {
+                alert('加载失败：' + error.message);
+            }
+        }
+        
+        function showSummary() {
+            document.getElementById('summary').style.display = 'block';
+            document.getElementById('summary-middleware').textContent = testResults.middleware ? '✅ 正常' : '❌ 异常';
+            document.getElementById('summary-config').textContent = testResults.config ? '✅ 正常' : '❌ 异常';
+            document.getElementById('summary-api').textContent = testResults.api ? '✅ 正常' : '❌ 异常';
+            document.getElementById('summary-overall').textContent = testResults.overall ? '✅ 一切正常' : '❌ 存在问题';
+        }
+        
+        // 页面加载时自动运行测试
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>
