@@ -3,6 +3,7 @@ data/*
 node_modules
 wrangler.toml
 .DS_Store
+_worker/
 
 .kiro/
 .vscode/
